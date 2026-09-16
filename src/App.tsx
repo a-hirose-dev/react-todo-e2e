@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export type TaskStatus = 'todo' | 'in-progress' | 'done';
 
@@ -8,11 +8,30 @@ export interface Task {
   status: TaskStatus;
 }
 
+const STORAGE_KEY = 'task_app_tasks';
+
 export const App: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  // 初期値の読み込み: localStorage から取得（存在しなければ空配列）
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('LocalStorageの読み込みに失敗しました', e);
+      }
+    }
+    return [];
+  });
+
   const [inputTitle, setInputTitle] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [filter, setFilter] = useState<'all' | TaskStatus>('all');
+
+  // tasks が更新されるたびに LocalStorage に自動保存
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  }, [tasks]);
 
   // タスク追加
   // コンポーネントの定義
@@ -29,15 +48,15 @@ export const App: React.FC = () => {
       status: 'todo',
     };
 
-    setTasks([...tasks, newTask]);
+    setTasks((prev) => [...prev, newTask]);
     setInputTitle('');
     setErrorMessage('');
   };
 
   // ステータス更新
   const handleStatusChange = (id: number, newStatus: TaskStatus) => {
-    setTasks(
-      tasks.map((task) =>
+    setTasks((prev) =>
+      prev.map((task) =>
         task.id === id ? { ...task, status: newStatus } : task
       )
     );
@@ -45,7 +64,7 @@ export const App: React.FC = () => {
 
   // タスク削除
   const handleDeleteTask = (id: number) => {
-    setTasks(tasks.filter((task) => task.id !== id));
+    setTasks((prev) => prev.filter((task) => task.id !== id));
   };
 
   // フィルター
